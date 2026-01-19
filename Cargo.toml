@@ -1,0 +1,18 @@
+[package]
+name = "walk_bg"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+wayland-client = "0.31.12"
+wayland-protocols = { version = "0.32.10", features = ["client", "unstable"] }
+wayland-protocols-wlr = { version = "0.3.10", features = ["client"] }
+smithay-client-toolkit = { version = "0.20", default-features = false, features = ["calloop"] }
+memmap2 = "0.9.9"
+image = "0.25.9"
+calloop = "0.14.3"
+nix = { version = "0.30.1", features = ["mman"] }
+tempfile = "3.24.0"
+dirs = "6.0.0"
+facet = "0.42.0"
+facet-toml = "0.42.0"

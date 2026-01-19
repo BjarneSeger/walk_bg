@@ -13,7 +13,7 @@ Precompiled binaries are available on the releases page in the right sidebar.
 ## From source
 You need to have Rust and Cargo installed. Then you can clone the repository and build it with Cargo:
 ```bash
-git clone
+git clone https://github.com/BjarneSeger/walk_bg.git
 cargo build --release
 ```
 The binary will be located in `target/release/walk_bg`.

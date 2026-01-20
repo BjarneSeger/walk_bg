@@ -36,6 +36,7 @@ pub struct Config {
     /// The currently active field
     #[facet(default = 0xffff0000u32)]
     active_color: u32,
+    /// Whether to connect the dots
     #[facet(default = true)]
     connect_dots: bool,
 }

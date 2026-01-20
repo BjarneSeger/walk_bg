@@ -46,7 +46,7 @@ pub fn draw_dot_grid(
             let g = (dot_color[1] as f32 + (200.0 - dot_color[1] as f32) * intensity) as u8;
             let b = (dot_color[0] as f32 + (100.0 - dot_color[0] as f32) * intensity) as u8;
 
-            let (r, g, b) = if (grid_x, grid_y) == current_pos {
+            let (r, g, b) = if (grid_x, grid_y) == current_pos && config.display_active_field() {
                 let highlight_colors = config.get_active_color().to_le_bytes(); // BGRA
                 (
                     highlight_colors[2],

@@ -33,6 +33,8 @@ pub struct Config {
     /// Foreground color in ARGB format
     #[facet(default = 0xff606060u32)]
     fg_color: u32,
+    #[facet(default = true)]
+    display_active_field: bool,
     /// The currently active field
     #[facet(default = 0xffff0000u32)]
     active_color: u32,
@@ -51,6 +53,7 @@ impl Default for Config {
             dot_radius: 2,
             bg_color: 0xff1a1a1au32,
             fg_color: 0xff606060u32,
+            display_active_field: true,
             active_color: 0xffff0000u32,
             connect_dots: true,
         }
@@ -89,6 +92,10 @@ impl Config {
 
     pub fn connect_dots(&self) -> bool {
         self.connect_dots
+    }
+
+    pub fn display_active_field(&self) -> bool {
+        self.display_active_field
     }
 }
 

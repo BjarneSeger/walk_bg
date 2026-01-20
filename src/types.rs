@@ -177,14 +177,19 @@ pub struct App {
     width: u32,
     height: u32,
     configured: bool,
-    buffer: Option<wl_shm_pool::WlShmPool>,
+    pool: Option<wl_shm_pool::WlShmPool>,
     grid: Grid,
     current_pos: (u32, u32),
     needs_redraw: bool,
+    file: std::fs::File,
+    mmap: Option<memmap2::MmapMut>,
 }
 
 impl App {
     pub fn new(global_list: &globals::GlobalList, qh: &QueueHandle<Self>) -> Self {
+        let file = tempfile::tempfile().expect("Failed to create tempfile");
+        file.lock().expect("Failed to lock tempfile");
+
         Self {
             config: Config::default(),
             registry_state: RegistryState::new(global_list),
@@ -196,10 +201,12 @@ impl App {
             width: 0,
             height: 0,
             configured: false,
-            buffer: None,
+            pool: None,
             grid: Grid::new(0, 0),
             current_pos: (0, 0),
             needs_redraw: false,
+            file: tempfile::tempfile().expect("Failed to create temp file"),
+            mmap: None,
         }
     }
 
@@ -259,6 +266,13 @@ impl App {
         &self.grid
     }
 
+    /// Draw a new frame.
+    ///
+    /// # Safety
+    /// We use unsafe for mapping a file mutably into memory. The underlying file is
+    /// locked by default and there should be no program that randomly writes to any
+    /// tempfile. If you have a suggestion on how to handle this safer, feel free to
+    /// open an issue.
     pub fn draw(&mut self, qh: &QueueHandle<Self>) {
         if !self.configured || self.width == 0 || self.height == 0 {
             return;
@@ -276,33 +290,15 @@ impl App {
         let stride = width * 4;
         let size = stride * height;
 
-        // Create a temporary file for the shared memory
-        let file = match tempfile::tempfile() {
-            Ok(f) => f,
-            Err(e) => {
-                eprintln!("Failed to create temp file: {}", e);
-                return;
-            }
-        };
-
-        if let Err(e) = file.set_len(size as u64) {
-            eprintln!("Failed to set file length: {}", e);
-            return;
+        if self.mmap.is_none() {
+            self.mmap =
+                Some(unsafe { memmap2::MmapMut::map_mut(&self.file).expect("Failed to map file") });
         }
-
-        // Map the file to memory
-        let mut mmap = match unsafe { memmap2::MmapMut::map_mut(&file) } {
-            Ok(m) => m,
-            Err(e) => {
-                eprintln!("Failed to create memory map: {}", e);
-                return;
-            }
-        };
 
         self.grid.visit(self.current_pos.0, self.current_pos.1);
 
         crate::draw::draw_dot_grid(
-            &mut mmap,
+            self.mmap.as_mut().unwrap(),
             self.width,
             self.height,
             self.config.clone(),
@@ -310,20 +306,28 @@ impl App {
             self.current_pos,
         );
 
-        let pool = self
-            .shm_state
-            .wl_shm()
-            .create_pool(file.as_fd(), size, qh, ());
+        if self.pool.is_none() {
+            self.pool = Some(
+                self.shm_state
+                    .wl_shm()
+                    .create_pool(self.file.as_fd(), size, qh, ()),
+            );
+        }
 
-        let buffer = pool.create_buffer(0, width, height, stride, wl_shm::Format::Argb8888, qh, ());
+        let buffer = self.pool.as_ref().unwrap().create_buffer(
+            0,
+            width,
+            height,
+            stride,
+            wl_shm::Format::Argb8888,
+            qh,
+            (),
+        );
 
-        // Attach the buffer to the surface
         let wl_surface = layer_surface.wl_surface();
         wl_surface.attach(Some(&buffer), 0, 0);
         wl_surface.damage_buffer(0, 0, width, height);
         wl_surface.commit();
-
-        self.buffer = Some(pool);
     }
 }
 
@@ -420,8 +424,11 @@ impl LayerShellHandler for App {
         self.width = configure.new_size.0;
         self.height = configure.new_size.1;
 
+        if let Err(e) = self.file.set_len((self.width * 4 * self.height) as u64) {
+            eprintln!("Failed to set tempfile length: {e}");
+        };
+
         if self.width == 0 || self.height == 0 {
-            // Get output size if not provided
             self.width = 1920;
             self.height = 1080;
         }

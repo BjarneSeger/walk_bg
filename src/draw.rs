@@ -1,6 +1,5 @@
 use crate::types;
 
-/// Draw a default background in case no image was specified
 pub fn draw_dot_grid(
     mmap: &mut memmap2::MmapMut,
     width: u32,

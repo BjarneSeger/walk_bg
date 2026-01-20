@@ -29,6 +29,13 @@ pub fn draw_dot_grid(
     let grid_width = (width / spacing) + 1;
     let grid_height = (height / spacing) + 1;
 
+    let connection_color = [
+        (dot_color[0] as f32 * 0.5) as u8, // B
+        (dot_color[1] as f32 * 0.5) as u8, // G
+        (dot_color[2] as f32 * 0.5) as u8, // R
+        0xff,                              // A
+    ];
+
     (0..grid_height)
         .flat_map(|grid_y| (0..grid_width).map(move |grid_x| (grid_x, grid_y)))
         .for_each(|(grid_x, grid_y)| {
@@ -55,7 +62,33 @@ pub fn draw_dot_grid(
             let center_x = grid_x * spacing;
             let center_y = grid_y * spacing;
 
+            if config.connect_dots() && visit_count > 0 {
+                if grid_x + 1 < grid_width && grid.get_visits(grid_x + 1, grid_y) > 0 {
+                    let neighbor_x = ((grid_x + 1) * spacing) as i32;
+                    draw_line(
+                        mmap,
+                        width,
+                        height,
+                        center_x as i32,
+                        center_y as i32,
+                        neighbor_x,
+                        center_y as i32,
+                        &connection_color,
+                    );
+                }
 
+                if grid_y + 1 < grid_height && grid.get_visits(grid_x, grid_y + 1) > 0 {
+                    let neighbor_y = ((grid_y + 1) * spacing) as i32;
+                    draw_line(
+                        mmap,
+                        width,
+                        height,
+                        center_x as i32,
+                        center_y as i32,
+                        center_x as i32,
+                        neighbor_y,
+                        &connection_color,
+                    );
                 }
             }
 
@@ -81,6 +114,47 @@ pub fn draw_dot_grid(
                 });
         });
 }
+
+/// Draw a line between two points using Bresenham's line algorithm
+fn draw_line(
+    mmap: &mut memmap2::MmapMut,
+    width: u32,
+    height: u32,
+    x0: i32,
+    y0: i32,
+    x1: i32,
+    y1: i32,
+    color: &[u8; 4],
+) {
+    let dx = (x1 - x0).abs();
+    let dy = (y1 - y0).abs();
+    let sx = if x0 < x1 { 1 } else { -1 };
+    let sy = if y0 < y1 { 1 } else { -1 };
+    let mut err = dx - dy;
+    let mut x = x0;
+    let mut y = y0;
+
+    loop {
+        if x >= 0 && x < width as i32 && y >= 0 && y < height as i32 {
+            let offset = (y as u32 * width + x as u32) as usize * 4;
+            mmap[offset] = color[0]; // B
+            mmap[offset + 1] = color[1]; // G
+            mmap[offset + 2] = color[2]; // R
+            mmap[offset + 3] = color[3]; // A
+        }
+
+        if x == x1 && y == y1 {
+            break;
+        }
+
+        let e2 = 2 * err;
+        if e2 > -dy {
+            err -= dy;
+            x += sx;
+        }
+        if e2 < dx {
+            err += dx;
+            y += sy;
         }
     }
 }

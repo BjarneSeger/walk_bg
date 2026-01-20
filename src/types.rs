@@ -36,6 +36,8 @@ pub struct Config {
     /// The currently active field
     #[facet(default = 0xffff0000u32)]
     active_color: u32,
+    #[facet(default = true)]
+    connect_dots: bool,
 }
 
 /// Needs to be manually implemented because facets default only happens when
@@ -49,6 +51,7 @@ impl Default for Config {
             bg_color: 0xff1a1a1au32,
             fg_color: 0xff606060u32,
             active_color: 0xffff0000u32,
+            connect_dots: true,
         }
     }
 }
@@ -81,6 +84,10 @@ impl Config {
 
     pub fn get_walks_per_minute(&self) -> f32 {
         self.walks_per_minute
+    }
+
+    pub fn connect_dots(&self) -> bool {
+        self.connect_dots
     }
 }
 

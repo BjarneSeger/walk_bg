@@ -29,8 +29,9 @@ pub fn draw_dot_grid(
     let grid_width = (width / spacing) + 1;
     let grid_height = (height / spacing) + 1;
 
-    for grid_y in 0..grid_height {
-        for grid_x in 0..grid_width {
+    (0..grid_height)
+        .flat_map(|grid_y| (0..grid_width).map(move |grid_x| (grid_x, grid_y)))
+        .for_each(|(grid_x, grid_y)| {
             let visit_count = grid.get_visits(grid_x, grid_y);
 
             let intensity = (visit_count as f32 / 10.0).min(1.0);
@@ -54,22 +55,32 @@ pub fn draw_dot_grid(
             let center_x = grid_x * spacing;
             let center_y = grid_y * spacing;
 
-            for dy in -dot_radius..=dot_radius {
-                for dx in -dot_radius..=dot_radius {
-                    if (dx * dx + dy * dy) as f32 <= (dot_radius * dot_radius) as f32 {
-                        let px = center_x as i32 + dx;
-                        let py = center_y as i32 + dy;
 
-                        if px >= 0 && px < width as i32 && py >= 0 && py < height as i32 {
-                            let offset = (py as u32 * width + px as u32) as usize * 4;
-                            mmap[offset] = dot_color[0]; // B
-                            mmap[offset + 1] = dot_color[1]; // G
-                            mmap[offset + 2] = dot_color[2]; // R
-                            mmap[offset + 3] = dot_color[3]; // A
-                        }
-                    }
                 }
             }
+
+            (-dot_radius..=dot_radius)
+                .flat_map(|dy| {
+                    (-dot_radius..=dot_radius)
+                        .map(move |dx| (dx, dy))
+                        .filter(|(dx, dy)| {
+                            (dx * dx + dy * dy) as f32 <= (dot_radius * dot_radius) as f32
+                        })
+                })
+                .for_each(|(dx, dy)| {
+                    let px = center_x as i32 + dx;
+                    let py = center_y as i32 + dy;
+
+                    if px >= 0 && px < width as i32 && py >= 0 && py < height as i32 {
+                        let offset = (py as u32 * width + px as u32) as usize * 4;
+                        mmap[offset] = dot_color[0]; // B
+                        mmap[offset + 1] = dot_color[1]; // G
+                        mmap[offset + 2] = dot_color[2]; // R
+                        mmap[offset + 3] = dot_color[3]; // A
+                    }
+                });
+        });
+}
         }
     }
 }

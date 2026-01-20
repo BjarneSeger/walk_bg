@@ -16,7 +16,7 @@ use wayland_client::{
 };
 
 /// The config file format
-#[derive(facet::Facet, Debug, Default, Clone)]
+#[derive(facet::Facet, Debug, Clone)]
 pub struct Config {
     /// How many walks should be performed per minute
     #[facet(default = 30.0)]
@@ -36,6 +36,21 @@ pub struct Config {
     /// The currently active field
     #[facet(default = 0xffff0000u32)]
     active_color: u32,
+}
+
+/// Needs to be manually implemented because facets default only happens when
+/// serializing, not for the Default impl.
+impl Default for Config {
+    fn default() -> Self {
+        Config {
+            walks_per_minute: 30.0,
+            pixels_per_point: 20,
+            dot_radius: 2,
+            bg_color: 0xff1a1a1au32,
+            fg_color: 0xff606060u32,
+            active_color: 0xffff0000u32,
+        }
+    }
 }
 
 impl Config {
